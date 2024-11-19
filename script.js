@@ -1,40 +1,67 @@
-// Replace with your Render-deployed backend URL
-const socket = io('https://icsiamu.onrender.com');
+// Replace this URL with your backend's live Render URL
+const socket = io('https://icsi-amu.onrender.com');
 
+// Get DOM elements
+const createRoomBtn = document.getElementById('createRoom');
+const joinRoomBtn = document.getElementById('joinRoom');
+const roomIDInput = document.getElementById('roomID');
 const usernameInput = document.getElementById('username');
-const roomInput = document.getElementById('room');
-const joinRoomButton = document.getElementById('join-room');
-const chatRoom = document.getElementById('chat-room');
-const messagesDiv = document.getElementById('messages');
+const chatScreen = document.getElementById('chatScreen');
+const chatMessages = document.getElementById('messages');
 const messageInput = document.getElementById('message');
-const sendButton = document.getElementById('send');
+const sendBtn = document.getElementById('send');
+
+// Store room and username
+let roomID = '';
+let username = '';
+
+// Create a room
+createRoomBtn.addEventListener('click', () => {
+  username = usernameInput.value.trim();
+  if (!username) {
+    alert('Enter a username!');
+    return;
+  }
+
+  roomID = Math.random().toString(36).substr(2, 8); // Generate random room ID
+  alert(`Your Room ID: ${roomID}`);
+  socket.emit('createRoom', { username, roomID });
+  enterChatRoom();
+});
 
 // Join a room
-joinRoomButton.addEventListener('click', () => {
-  const username = usernameInput.value.trim();
-  const room = roomInput.value.trim();
+joinRoomBtn.addEventListener('click', () => {
+  username = usernameInput.value.trim();
+  roomID = roomIDInput.value.trim();
 
-  if (username && room) {
-    socket.emit('joinRoom', { username, room });
-    chatRoom.style.display = 'block';
-    usernameInput.style.display = 'none';
-    roomInput.style.display = 'none';
-    joinRoomButton.style.display = 'none';
+  if (!username || !roomID) {
+    alert('Enter both username and Room ID!');
+    return;
   }
+
+  socket.emit('joinRoom', { username, roomID });
+  enterChatRoom();
+});
+
+// Enter chat room screen
+function enterChatRoom() {
+  document.getElementById('roomSetup').style.display = 'none';
+  chatScreen.style.display = 'block';
+}
+
+// Send a message
+sendBtn.addEventListener('click', () => {
+  const message = messageInput.value.trim();
+  if (!message) return;
+
+  socket.emit('chatMessage', { roomID, username, message });
+  messageInput.value = '';
 });
 
 // Display incoming messages
-socket.on('message', (message) => {
+socket.on('message', (data) => {
   const messageElement = document.createElement('div');
-  messageElement.textContent = message;
-  messagesDiv.appendChild(messageElement);
-});
-
-// Send a message
-sendButton.addEventListener('click', () => {
-  const message = messageInput.value.trim();
-  if (message) {
-    socket.emit('chatMessage', message);
-    messageInput.value = '';
-  }
+  messageElement.textContent = `${data.username}: ${data.message}`;
+  chatMessages.appendChild(messageElement);
+  chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
 });
